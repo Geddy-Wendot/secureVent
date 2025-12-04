@@ -27,7 +27,7 @@ public class AESCrypto {
         }
     }
 
-    // 2. ENCRYPT: String -> Encrypted String
+    // 2. ENCRYPT: String = Encrypted String
     public static String encrypt(String strToEncrypt, String secret) {
         try {
             setKey(secret);
@@ -41,7 +41,7 @@ public class AESCrypto {
         return null;
     }
 
-    // 3. DECRYPT: Encrypted String -> Original String
+    // 3. DECRYPT: Encrypted String = Original String
     public static String decrypt(String strToDecrypt, String secret) {
         try {
             setKey(secret);

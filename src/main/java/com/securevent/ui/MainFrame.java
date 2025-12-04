@@ -7,7 +7,7 @@ public class MainFrame extends JFrame {
     public MainFrame() {
         setTitle("SecureVent - Wellness Journal");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(500, 600);
+        setSize(600, 700);
         setLocationRelativeTo(null); // Center on screen
         
         // Add our Logic Panel

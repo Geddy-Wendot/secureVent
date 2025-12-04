@@ -21,14 +21,14 @@ public class JournalPanel extends JPanel {
     private JButton hideBtn;
 
     public JournalPanel() {
-        // 1. MAIN LAYOUT: Split into Left (Image) and Right (Journal)
-        setLayout(new GridLayout(1, 2, 20, 0)); // 1 Row, 2 Columns, 20px Gap
-        setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40)); // Outer Margins
-        setBackground(new Color(245, 250, 245)); // Wellness Mint Background
+        // 1. MAIN LAYOUT: Split into Left  and Right 
+        setLayout(new GridLayout(1, 2, 20, 0)); 
+        setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40)); 
+        setBackground(new Color(245, 250, 245)); 
 
-        // ==========================================
+   
         // LEFT PAGE (Image Section)
-        // ==========================================
+
         JPanel leftPage = new JPanel(new BorderLayout(10, 10));
         leftPage.setOpaque(false);
 
@@ -54,9 +54,8 @@ public class JournalPanel extends JPanel {
         
         leftPage.add(imgControls, BorderLayout.SOUTH);
 
-        // ==========================================
+
         // RIGHT PAGE (Writing Section)
-        // ==========================================
         JPanel rightPage = new JPanel(new BorderLayout(10, 10));
         rightPage.setOpaque(false);
 
@@ -69,9 +68,8 @@ public class JournalPanel extends JPanel {
         // The Big Text Area (Takes Center of Right Page)
         journalInput = new JTextArea();
         journalInput.setFont(new Font("Serif", Font.PLAIN, 16));
-        journalInput.setLineWrap(true);     // Important: Wrap text to next line
+        journalInput.setLineWrap(true);     
         journalInput.setWrapStyleWord(true); // Don't cut words in half
-        journalInput.setMargin(new Insets(10, 10, 10, 10)); // Internal padding
         
         JScrollPane scrollPane = new JScrollPane(journalInput);
         scrollPane.setBorder(BorderFactory.createTitledBorder(
@@ -112,9 +110,9 @@ public class JournalPanel extends JPanel {
         add(leftPage);
         add(rightPage);
 
-        // ==========================================
+        
         // LOGIC & LISTENERS
-        // ==========================================
+       
         
         // 1. Capacity Monitor
         journalInput.addKeyListener(new KeyAdapter() {

@@ -5,7 +5,7 @@ import javax.swing.SwingUtilities;
 
 public class App {
     public static void main(String[] args) {
-        // Run UI in the Event Dispatch Thread (Best Practice)
+        // Run UI in the Event
         SwingUtilities.invokeLater(() -> {
             new MainFrame();
         });
