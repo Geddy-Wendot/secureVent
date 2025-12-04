@@ -1,26 +1,26 @@
 # SecureVent
-# SecureVent 🍃
+
 ### *Privacy is the foundation of Peace of Mind.*
 
 SecureVent is a digital wellness application that allows students to journal without fear of judgment or privacy breaches. It utilizes **Steganography** and **AES Encryption** to conceal text data inside image files (pixels).
 
-## 🏆 Hackathon Theme: Technology for Wellness
+## Hackathon Theme: Technology for Wellness
 **Problem:** Digital anxiety prevents honest expression. Students fear their journals will be read by others.
 **Solution:** A steganographic tool that disguises sensitive journal entries as innocent "Nature Photography."
 
-## 🛠️ Tech Stack
+##  Tech Stack
 * **Language:** Java 17+
 * **GUI:** Java Swing (Custom AWT Styling)
 * **Cryptography:** AES-256 (javax.crypto) + SHA-256 Hashing
 * **Algorithm:** Least Significant Bit (LSB) Manipulation
 
-## 🚀 How to Run
+##  How to Run
 1.  Open the project in VS Code.
 2.  Run `src/main/java/com/securevent/App.java`.
 3.  **To Hide:** Load a PNG -> Type Text -> Set Password -> Click "Hide & Save".
 4.  **To Reveal:** Load the saved PNG -> Type Password -> Click "Reveal".
 
-## 📐 The Math (Steganography)
+##  The Math (Steganography)
 We treat the image as a matrix of pixels. We manipulate the binary vector of the Blue channel:
 `New_Pixel = (Old_Pixel & 0xFFFFFFFE) | Secret_Bit`
 This changes the color value by 1/255th, which is invisible to the human eye.
