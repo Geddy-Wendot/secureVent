@@ -7,7 +7,7 @@ public class Steganography {
     // Delimiter to know when the message stops (Safety check)
     private static final String END_SIGNAL = "\0\u0004\0";
 
-    // ENCODE: Image + Message -> New Image
+    // ENCODE: Image + Message = New Image
     public static BufferedImage embedText(BufferedImage image, String text) {
         String data = text + END_SIGNAL; // Add stopper
         int dataLength = data.length();

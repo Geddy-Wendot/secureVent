@@ -10,6 +10,7 @@ import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 
 public class JournalPanel extends JPanel {
 
@@ -126,6 +127,24 @@ public class JournalPanel extends JPanel {
         loadBtn.addActionListener(e -> {
             currentImage = ImageUtils.loadImage(this);
             if (currentImage != null) {
+
+                File tempFile = new File("temp_analysis.png"); 
+                    try {
+                        javax.imageio.ImageIO.write(currentImage, "png", tempFile);
+                        
+                        boolean isSafe = com.securevent.core.ImageAnalyzer.isImageSafe(tempFile);
+                        
+                        if (!isSafe) {
+                            JOptionPane.showMessageDialog(this, 
+                                "⚠️ Security Warning!\n\nPython Analysis detected low entropy (simple image).\nHiding data here is risky. Please choose a more complex photo.", 
+                                "Steganalysis Alert", JOptionPane.WARNING_MESSAGE);
+                            // Optional: return; // Stop them from using it
+                        } else {
+                            // If safe, show a subtle "Verified by Python" success message
+                            System.out.println("Python Analysis: Image is mathematically secure.");
+                        }
+                        
+                    } catch (Exception ex) { ex.printStackTrace(); }           
                 // Scale for display (Keep aspect ratio if possible, but fit box)
                 Image scaled = currentImage.getScaledInstance(
                     imagePreviewLabel.getWidth(), 
