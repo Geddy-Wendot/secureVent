@@ -138,7 +138,7 @@ public class JournalPanel extends JPanel {
                             JOptionPane.showMessageDialog(this, 
                                 "⚠️ Security Warning!\n\nPython Analysis detected low entropy (simple image).\nHiding data here is risky. Please choose a more complex photo.", 
                                 "Steganalysis Alert", JOptionPane.WARNING_MESSAGE);
-                            // Optional: return; // Stop them from using it
+                            
                         } else {
                             // If safe, show a subtle "Verified by Python" success message
                             System.out.println("Python Analysis: Image is mathematically secure.");

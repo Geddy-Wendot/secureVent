@@ -10,7 +10,7 @@ public class ImageAnalyzer {
     public static boolean isImageSafe(File imageFile) {
         try {
             // 1. Setup the Process Call Python
-            ProcessBuilder pb = new ProcessBuilder("python", "src/main/resources/analyze_image.py", imageFile.getAbsolutePath());
+            ProcessBuilder pb = new ProcessBuilder("python", "analyze_image.py", imageFile.getAbsolutePath());
             pb.redirectErrorStream(true); // Merge errors with output
             
             Process process = pb.start();
