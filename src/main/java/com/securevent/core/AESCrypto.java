@@ -1,79 +1,80 @@
 package com.securevent.core;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import java.nio.ByteBuffer;
+import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.util.Base64;
-import java.util.Arrays;
 
 public class AESCrypto {
 
-    private static SecretKeySpec secretKey;
-    private static final int GCM_IV_LENGTH = 12; // 96 bits
-    private static final int GCM_TAG_LENGTH = 128; // 128 bits
+    private static final int AES_KEY_SIZE = 256;
+    private static final int GCM_IV_LENGTH = 12;
+    private static final int GCM_TAG_LENGTH = 128;
+    private static final int SALT_LENGTH = 16;
+    private static final int ITERATION_COUNT = 65536;
 
-    // 1. GENERATE KEY: Turns a simple password into a 256-bit AES Key
-    public static void setKey(String myKey) {
-        try {
-            byte[] key = myKey.getBytes(StandardCharsets.UTF_8);
-            // Use SHA-256 to hash the key to a fixed length
-            MessageDigest sha = MessageDigest.getInstance("SHA-256");
-            key = sha.digest(key);
-            // Use 32 bytes for AES-256, which is more secure.
-            key = Arrays.copyOf(key, 32);
-            secretKey = new SecretKeySpec(key, "AES");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public static String encrypt(String plainText, String password) throws Exception {
+        // 1. Generate Random Salt and IV
+        byte[] salt = new byte[SALT_LENGTH];
+        byte[] iv = new byte[GCM_IV_LENGTH];
+        SecureRandom random = new SecureRandom();
+        random.nextBytes(salt);
+        random.nextBytes(iv);
+
+        // 2. Derive Key from Password
+        SecretKey secretKey = deriveKey(password, salt);
+
+        // 3. Encrypt
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec);
+        byte[] cipherText = cipher.doFinal(plainText.getBytes("UTF-8"));
+
+        // 4. Combine Salt + IV + CipherText
+        ByteBuffer byteBuffer = ByteBuffer.allocate(salt.length + iv.length + cipherText.length);
+        byteBuffer.put(salt);
+        byteBuffer.put(iv);
+        byteBuffer.put(cipherText);
+
+        return Base64.getEncoder().encodeToString(byteBuffer.array());
     }
 
-    // 2. ENCRYPT: String = Encrypted String
-    public static String encrypt(String strToEncrypt, String secret) {
-        try {
-            setKey(secret);
-            // GCM requires a unique Initialization Vector (IV) for each encryption
-            byte[] iv = new byte[GCM_IV_LENGTH];
-            new java.security.SecureRandom().nextBytes(iv);
-            
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);
-            
-            byte[] cipherText = cipher.doFinal(strToEncrypt.getBytes(StandardCharsets.UTF_8));
-            
-            // Prepend the IV to the ciphertext for use in decryption
-            byte[] cipherTextWithIv = new byte[iv.length + cipherText.length];
-            System.arraycopy(iv, 0, cipherTextWithIv, 0, iv.length);
-            System.arraycopy(cipherText, 0, cipherTextWithIv, iv.length, cipherText.length);
-            
-            return Base64.getEncoder().encodeToString(cipherTextWithIv);
-        } catch (Exception e) {
-            System.out.println("Error while encrypting: " + e.toString());
-        }
-        return null;
+    public static String decrypt(String encryptedData, String password) throws Exception {
+        byte[] decode = Base64.getDecoder().decode(encryptedData);
+        ByteBuffer byteBuffer = ByteBuffer.wrap(decode);
+
+        // 1. Extract Salt and IV
+        byte[] salt = new byte[SALT_LENGTH];
+        byteBuffer.get(salt);
+        byte[] iv = new byte[GCM_IV_LENGTH];
+        byteBuffer.get(iv);
+
+        // 2. Extract CipherText
+        byte[] cipherText = new byte[byteBuffer.remaining()];
+        byteBuffer.get(cipherText);
+
+        // 3. Derive Key
+        SecretKey secretKey = deriveKey(password, salt);
+
+        // 4. Decrypt
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec);
+
+        byte[] plainText = cipher.doFinal(cipherText);
+        return new String(plainText, "UTF-8");
     }
 
-    // 3. DECRYPT: Encrypted String = Original String
-    public static String decrypt(String strToDecrypt, String secret) {
-        try {
-            setKey(secret);
-            
-            byte[] cipherTextWithIv = Base64.getDecoder().decode(strToDecrypt);
-            
-            // Extract the IV from the beginning of the byte array
-            byte[] iv = Arrays.copyOfRange(cipherTextWithIv, 0, GCM_IV_LENGTH);
-            byte[] cipherText = Arrays.copyOfRange(cipherTextWithIv, GCM_IV_LENGTH, cipherTextWithIv.length);
-            
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
-            
-            return new String(cipher.doFinal(cipherText));
-        } catch (Exception e) {
-            // If password is wrong or data is corrupt, this will throw an exception
-            return null;
-        }
+    private static SecretKey deriveKey(String password, byte[] salt) throws Exception {
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATION_COUNT, AES_KEY_SIZE);
+        SecretKey tmp = factory.generateSecret(spec);
+        return new SecretKeySpec(tmp.getEncoded(), "AES");
     }
 }
