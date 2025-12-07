@@ -10,9 +10,15 @@ public class ImageAnalyzer {
     public static boolean isImageSafe(File imageFile) {
         try {
             // 1. Setup the Process Call Python
-            ProcessBuilder pb = new ProcessBuilder("python", "analyze_image.py", imageFile.getAbsolutePath());
-            pb.redirectErrorStream(true); // Merge errors with output
+           // Merge errors with output
             
+            String scriptPath = "scripts" + File.separator + "analyze_image.py";
+            File scriptFile = new File(scriptPath);
+
+            ProcessBuilder pb = new ProcessBuilder("python", scriptFile.getAbsolutePath(), imageFile.getAbsolutePath());
+            pb.redirectErrorStream(true);            
+
+
             Process process = pb.start();
 
             // 2. Read the Result
@@ -30,7 +36,7 @@ public class ImageAnalyzer {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return true; // Default to allowing it if Python fails
+            return false; // Default to failing (unsafe) if Python analysis fails
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.securevent.core;
 
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -10,17 +11,18 @@ import java.util.Arrays;
 public class AESCrypto {
 
     private static SecretKeySpec secretKey;
+    private static final int GCM_IV_LENGTH = 12; // 96 bits
+    private static final int GCM_TAG_LENGTH = 128; // 128 bits
 
     // 1. GENERATE KEY: Turns a simple password into a 256-bit AES Key
     public static void setKey(String myKey) {
         try {
             byte[] key = myKey.getBytes(StandardCharsets.UTF_8);
-            // Use SHA-1 or SHA-256 to hash the key to a fixed length
+            // Use SHA-256 to hash the key to a fixed length
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             key = sha.digest(key);
-            // AES needs 16 bytes (128 bit) or 32 bytes (256 bit). 
-            // We slice the first 16 bytes for AES-128 (Faster/Simpler)
-            key = Arrays.copyOf(key, 16); 
+            // Use 32 bytes for AES-256, which is more secure.
+            key = Arrays.copyOf(key, 32);
             secretKey = new SecretKeySpec(key, "AES");
         } catch (Exception e) {
             e.printStackTrace();
@@ -31,10 +33,22 @@ public class AESCrypto {
     public static String encrypt(String strToEncrypt, String secret) {
         try {
             setKey(secret);
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-            // Return Base64 string so it's safe to transport
-            return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes(StandardCharsets.UTF_8)));
+            // GCM requires a unique Initialization Vector (IV) for each encryption
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            new java.security.SecureRandom().nextBytes(iv);
+            
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);
+            
+            byte[] cipherText = cipher.doFinal(strToEncrypt.getBytes(StandardCharsets.UTF_8));
+            
+            // Prepend the IV to the ciphertext for use in decryption
+            byte[] cipherTextWithIv = new byte[iv.length + cipherText.length];
+            System.arraycopy(iv, 0, cipherTextWithIv, 0, iv.length);
+            System.arraycopy(cipherText, 0, cipherTextWithIv, iv.length, cipherText.length);
+            
+            return Base64.getEncoder().encodeToString(cipherTextWithIv);
         } catch (Exception e) {
             System.out.println("Error while encrypting: " + e.toString());
         }
@@ -45,11 +59,20 @@ public class AESCrypto {
     public static String decrypt(String strToDecrypt, String secret) {
         try {
             setKey(secret);
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
-            cipher.init(Cipher.DECRYPT_MODE, secretKey);
-            return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
+            
+            byte[] cipherTextWithIv = Base64.getDecoder().decode(strToDecrypt);
+            
+            // Extract the IV from the beginning of the byte array
+            byte[] iv = Arrays.copyOfRange(cipherTextWithIv, 0, GCM_IV_LENGTH);
+            byte[] cipherText = Arrays.copyOfRange(cipherTextWithIv, GCM_IV_LENGTH, cipherTextWithIv.length);
+            
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
+            
+            return new String(cipher.doFinal(cipherText));
         } catch (Exception e) {
-            // If password is wrong, this usually throws a "BadPaddingException"
+            // If password is wrong or data is corrupt, this will throw an exception
             return null;
         }
     }

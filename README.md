@@ -70,9 +70,3 @@ Run:
 ```powershell
 java -cp out com.securevent.App
 ```
-
-If you want I can:
-- Remove the deprecated files entirely.
-- Add a Maven `pom.xml` and unit tests.
-- Harden the crypto to AES/GCM with authenticated encryption and add tests.
-
