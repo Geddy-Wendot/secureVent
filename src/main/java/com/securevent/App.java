@@ -5,9 +5,10 @@ import javax.swing.SwingUtilities;
 
 public class App {
     public static void main(String[] args) {
-        // Run UI in the Event
+        // Ensure UI is created on the Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
-            new MainFrame();
+            MainFrame frame = new MainFrame();
+            frame.setVisible(true);
         });
     }
-} 
+}

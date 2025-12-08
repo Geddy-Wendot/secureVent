@@ -3,16 +3,13 @@ package com.securevent.ui;
 import javax.swing.*;
 
 public class MainFrame extends JFrame {
-    
     public MainFrame() {
-        setTitle("SecureVent - Wellness Journal");
+        setTitle("SecureVent - Private Journal");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(600, 700);
-        setLocationRelativeTo(null); // Center on screen
+        setSize(900, 700);
+        setLocationRelativeTo(null);
         
-        // Add our Logic Panel
+        // Add the main journal panel
         add(new JournalPanel());
-        
-        setVisible(true);
     }
 }

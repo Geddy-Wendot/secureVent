@@ -11,19 +11,22 @@ SecureVent is a digital wellness application that allows students to journal wit
 ##  Tech Stack
 * **Language:** Java 17+
 * **GUI:** Java Swing (Custom AWT Styling)
-* **Cryptography:** AES-256 (javax.crypto) + SHA-256 Hashing
-* **Algorithm:** Least Significant Bit (LSB) Manipulation
+* **Cryptography:** AES-256-GCM (javax.crypto) with PBKDF2 key derivation
+* **Algorithm:** Least Significant Bit (LSB) Manipulation across R, G, and B channels
 
 ##  How to Run
-1.  Open the project in VS Code.
-2.  Run `src/main/java/com/securevent/App.java`.
-3.  **To Hide:** Load a PNG -> Type Text -> Set Password -> Click "Hide & Save".
+1.  Open the project in a Java IDE (e.g., VS Code with Java extensions, IntelliJ).
+2.  Ensure you have a JDK 17+ configured.
+3.  Run the `main` method in `src/main/java/com/securevent/App.java`.
+4.  **To Hide:** Load a PNG -> Type Text -> Set Password -> Click "2. Hide & Save".
 4.  **To Reveal:** Load the saved PNG -> Type Password -> Click "Reveal".
 
 ##  The Math (Steganography)
-We treat the image as a matrix of pixels. We manipulate the binary vector of the Blue channel:
-`New_Pixel = (Old_Pixel & 0xFFFFFFFE) | Secret_Bit`
-This changes the color value by 1/255th, which is invisible to the human eye.
+We treat the image as a grid of pixels. For each pixel, we alter the Least Significant Bit (LSB) of the Red, Green, and Blue color channels to hide 3 bits of data.
+`New_Red = (Old_Red & 0xFE) | Secret_Bit_1`
+`New_Green = (Old_Green & 0xFE) | Secret_Bit_2`
+`New_Blue = (Old_Blue & 0xFE) | Secret_Bit_3`
+This changes each color component by at most 1/255, a modification that is imperceptible to the human eye.
 
 
 Minimal, up-to-date README for the SecureVent scaffold.
@@ -58,7 +61,6 @@ Notes and cleanup performed
 - `JournalPanel` is the active UI used by `MainFrame`.
 - `GalleryPanel` and `LoginPanel` are kept as deprecated placeholders (non-instantiable) to avoid breaking older references; they are safe to remove later.
 - The AES implementation is a convenience helper; replace with AES/GCM for production security.
-
 Quick run (simple, no build system)
 
 Compile:

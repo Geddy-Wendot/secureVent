@@ -1,98 +1,131 @@
 package com.securevent.core;
 
 import java.awt.image.BufferedImage;
+import java.nio.charset.StandardCharsets;
 
 public class Steganography {
 
-    // Delimiter to know when the message stops (Safety check)
-    private static final String END_SIGNAL = "\0\u0004\0";
-
-    // ENCODE: Image + Message = New Image
-    public static BufferedImage embedText(BufferedImage image, String text) {
-        String data = text + END_SIGNAL; // Add stopper
-        int dataLength = data.length();
-        int imageWidth = image.getWidth();
-        int imageHeight = image.getHeight();
+    // Embeds the message string into the image
+    public static BufferedImage embed(BufferedImage image, String message) {
+        byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
+        int len = messageBytes.length;
         
-        // Simple Math check: Do we have enough pixels? (8 bits per char)
-        if (dataLength * 8 > imageWidth * imageHeight) {
-            throw new IllegalArgumentException("Text is too long for this image!");
+        // 4 bytes for length + message bytes
+        byte[] dataToHide = new byte[4 + len];
+        
+        // Encode length in first 4 bytes
+        dataToHide[0] = (byte) ((len >> 24) & 0xFF);
+        dataToHide[1] = (byte) ((len >> 16) & 0xFF);
+        dataToHide[2] = (byte) ((len >> 8) & 0xFF);
+        dataToHide[3] = (byte) (len & 0xFF);
+        
+        System.arraycopy(messageBytes, 0, dataToHide, 4, len);
+
+        return embedBytes(image, dataToHide);
+    }
+
+    // Extracts the message string from the image
+    public static String extract(BufferedImage image) {
+        byte[] lengthBytes = extractBytes(image, 4);
+        if (lengthBytes == null) return null;
+
+        int len = ((lengthBytes[0] & 0xFF) << 24) |
+                  ((lengthBytes[1] & 0xFF) << 16) |
+                  ((lengthBytes[2] & 0xFF) << 8) |
+                  (lengthBytes[3] & 0xFF);
+
+        // Safety check: Don't try to allocate massive arrays if reading garbage
+        if (len < 0 || len > image.getWidth() * image.getHeight() * 3 / 8) {
+            throw new IllegalArgumentException("Invalid data detected or image empty.");
         }
 
-        int charIndex = 0;
+        // We've read 32 bits (4 bytes). We need to continue reading 'len' bytes *after* that.
+        // The extractBytes helper starts from 0, so we need a way to read with offset or read all.
+        // For simplicity, we re-read everything including header, then slice. 
+        // A optimized version would maintain a pixel cursor.
+        
+        byte[] allData = extractBytes(image, 4 + len);
+        return new String(allData, 4, len, StandardCharsets.UTF_8);
+    }
+
+    private static BufferedImage embedBytes(BufferedImage image, byte[] data) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        
+        int dataIndex = 0;
         int bitIndex = 0; // 0 to 7
-        int currentByte = data.charAt(charIndex); // Get ASCII value of char
 
-        // Loop through pixels as a Matrix (x, y)
-        for (int y = 0; y < imageHeight; y++) {
-            for (int x = 0; x < imageWidth; x++) {
-                
-                // Get current pixel color
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (dataIndex >= data.length) return image;
+
                 int pixel = image.getRGB(x, y);
+                // Extract channels
+                int alpha = (pixel >> 24) & 0xFF;
+                int red   = (pixel >> 16) & 0xFF;
+                int green = (pixel >> 8) & 0xFF;
+                int blue  = pixel & 0xFF;
 
-                // Math Logic: Extract bit at 'bitIndex' from our char
-                // (currentByte >> (7-bitIndex)) shifts the bit we want to the right end
-                // & 1 isolates it.
-                int bitToHide = (currentByte >> (7 - bitIndex)) & 1;
+                // Embed in Red, then Green, then Blue
+                for (int i = 0; i < 3; i++) {
+                    if (dataIndex < data.length) {
+                        int bit = (data[dataIndex] >> (7 - bitIndex)) & 1;
+                        
+                        if (i == 0) red = (red & 0xFE) | bit;
+                        if (i == 1) green = (green & 0xFE) | bit;
+                        if (i == 2) blue = (blue & 0xFE) | bit;
 
-                // Update Pixel: Clear last bit, then OR with our new bit
-                int newPixel = (pixel & 0xFFFFFFFE) | bitToHide;
-                
-                image.setRGB(x, y, newPixel);
-
-                // Move to next bit
-                bitIndex++;
-                if (bitIndex >= 8) { // Finished one character?
-                    bitIndex = 0;
-                    charIndex++;
-                    if (charIndex >= dataLength) {
-                        return image; // We are done!
+                        bitIndex++;
+                        if (bitIndex == 8) {
+                            bitIndex = 0;
+                            dataIndex++;
+                        }
                     }
-                    currentByte = data.charAt(charIndex);
                 }
+                
+                int newPixel = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                image.setRGB(x, y, newPixel);
             }
         }
         return image;
     }
 
-    // DECODE: Image -> Hidden Text
-    public static String extractText(BufferedImage image) {
-        StringBuilder sb = new StringBuilder();
-        int imageWidth = image.getWidth();
-        int imageHeight = image.getHeight();
+    private static byte[] extractBytes(BufferedImage image, int lengthToRead) {
+        byte[] data = new byte[lengthToRead];
+        int width = image.getWidth();
+        int height = image.getHeight();
 
-        int currentByte = 0;
+        int dataIndex = 0;
         int bitIndex = 0;
+        int currentByte = 0;
 
-        for (int y = 0; y < imageHeight; y++) {
-            for (int x = 0; x < imageWidth; x++) {
-                
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (dataIndex >= lengthToRead) return data;
+
                 int pixel = image.getRGB(x, y);
-                
-                // Math Logic: Extract the Last Significant Bit (LSB)
-                int lsb = pixel & 1;
+                int red   = (pixel >> 16) & 0xFF;
+                int green = (pixel >> 8) & 0xFF;
+                int blue  = pixel & 0xFF;
 
-                // Add this bit to our current byte builder
-                // Shift current value left to make room, then add new bit
-                currentByte = (currentByte << 1) | lsb;
+                int[] channels = {red, green, blue};
 
-                bitIndex++;
-                if (bitIndex >= 8) { // We found a full character
-                    char c = (char) currentByte;
-                    sb.append(c);
-                    
-                    // Check if we hit the stopper signal
-                    if (sb.toString().endsWith(END_SIGNAL)) {
-                        // Return text without the signal
-                        return sb.substring(0, sb.length() - END_SIGNAL.length());
+                for (int i = 0; i < 3; i++) {
+                    if (dataIndex < lengthToRead) {
+                        int bit = channels[i] & 1;
+                        currentByte = (currentByte << 1) | bit;
+                        bitIndex++;
+
+                        if (bitIndex == 8) {
+                            data[dataIndex] = (byte) currentByte;
+                            dataIndex++;
+                            bitIndex = 0;
+                            currentByte = 0;
+                        }
                     }
-
-                    // Reset for next char
-                    bitIndex = 0;
-                    currentByte = 0;
                 }
             }
         }
-        return ""; // Nothing found
+        return data;
     }
 }
